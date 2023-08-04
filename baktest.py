@@ -1,3 +1,7 @@
+import ccxt, pandas as pd, matplotlib.pyplot as plt, sys, indicateur_techniques as ind
+sys.path.append('../Ohlcvplus')
+from ohlcv import OhlcvPlus
+
 class Backtest:
     def __init__(self, capital):
         self.capital = capital
