@@ -3,8 +3,8 @@ sys.path.append('../Ohlcvplus')
 from ohlcv import OhlcvPlus
 
 class Backtest:
-    def __init__(self, capital):
-        self.capital = capital
+    def __init__(self):
+        self.evolution = 0
         self.position = None
 
         self.all_position = pd.DataFrame({
@@ -20,7 +20,7 @@ class Backtest:
 
     def load_data(self, symbol='BTC/USDT', time='30m', length=500, sinces='2023-01-01 00:00:00'):
 		#telecharcgement des donnée ohlcv
-        ohlcvp = OhlcvPlus(ccxt.binance(), database_path='data.db')
+        ohlcvp = OhlcvPlus(ccxt.binance())
         self.data = ohlcvp.load(market=symbol, timeframe=time, since=sinces, limit=length, update=True, verbose=True, workers=100)
         self.close = self.data.close
     
@@ -28,10 +28,16 @@ class Backtest:
         self.data = df
         self.close = self.data.close
     
-    def open_pos(self, taille:int, pos:int, take_profit=None, stop_loss=None):
+    def export_csv(self, name):
+        self.data.to_csv(name)
+    
+    def import_csv(self, name):
+        self.data = pd.read_csv(name)
+        self.close = self.data.close
+    
+    def open_pos(self, pos:int, take_profit=None, stop_loss=None):
         if self.position is None:
-            self.position = [self.close[pos], taille / self.close[pos], pos]
-            print("open", pos)
+            self.position = [self.close[pos], pos]
 
             if take_profit:
                 self.take_profit = self.close[pos] * (1 + (take_profit / 100))
@@ -41,12 +47,10 @@ class Backtest:
     
     def close_pos(self, pos:int):
         if self.position is not None:
-            self.capital += (self.close[pos] - self.position[0]) * self.position[1]
-            print('close', pos)
-            print(self.capital)
-
+            self.evolution += (self.close[pos] - self.position[0]) / self.position[0]
+            
             add_ligne = pd.DataFrame({
-                    "open_pos" : [self.position[2]],
+                    "open_pos" : [self.position[1]],
                     "close_pos" : [pos],
 					"mode" : ["long"],
 					"open" : [self.position[0]],
@@ -73,7 +77,7 @@ class Backtest:
                 y = self.close[x]
                 axs[0].plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
 
-        else: 
+        elif len(args) != 0:
             fig, axs = plt.subplots()
             axs.plot(self.close)
             for ind in args[0]:
@@ -86,7 +90,17 @@ class Backtest:
                 x = self.all_position['close_pos'].iloc[row]
                 y = self.close[x]
                 axs.plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
-
+        else:
+            fig, ax = plt.subplots()
+            ax.plot(self.close)
+            for row in range(len(self.all_position)):
+                x = self.all_position['open_pos'].iloc[row]
+                y = self.close[x]
+                ax.plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
+                
+                x = self.all_position['close_pos'].iloc[row]
+                y = self.close[x]
+                ax.plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
 
     def trier_signal(self, series):
         result = []
@@ -113,3 +127,27 @@ class Backtest:
             if self.stop_loss > self.close[pos]:
                 self.close_pos(pos)
                 self.stop_loss = None
+    
+    def edge(self):
+        evolution = ((self.close.iloc[-1] - self.close.iloc[0]) / self.close.iloc[0])
+        longueur = 0
+        for row in range(len(self.all_position)):
+            longueur += self.all_position['close_pos'].iloc[row] - self.all_position['open_pos'].iloc[row]
+        evolution_longueur = (evolution * longueur) / len(self.close)
+        self.alpha = self.evolution - evolution_longueur
+        print(self.alpha)
+
+    def reset(self):
+        data = self.data
+        self.__init__()
+        self.data, self.close = data, data.close
+    
+    def backtest(self, signal_achat, signal_vente, stop_loss=None, take_profit=None):
+        for i in range(len(self.close)):
+            if signal_achat[i] == True:
+                self.open_pos(i, take_profit, stop_loss)
+            elif signal_vente[i] == True:
+                self.close_pos(i)
+            
+            self.updates(i)
+        print(self.all_position)
