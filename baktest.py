@@ -24,10 +24,6 @@ class Backtest:
         self.data = ohlcvp.load(market=symbol, timeframe=time, since=sinces, limit=length, update=True, verbose=True, workers=100)
         self.close = self.data.close
     
-    def copie_data(self, df):
-        self.data = df
-        self.close = self.data.close
-    
     def export_csv(self, name):
         self.data.to_csv(name)
     
