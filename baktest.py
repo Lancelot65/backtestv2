@@ -18,17 +18,23 @@ class Backtest:
         self.stop_loss = None
         self.take_profit = None
 
-    def load_data(self, symbol='BTC/USDT', time='30m', length=500, sinces='2023-01-01 00:00:00'):
-		#telecharcgement des donnée ohlcv
+    def load_crypto(self, symbol='BTC/USDT', time='30m', length=-1, sinces='2023-01-01 00:00:00'):
+		
         ohlcvp = OhlcvPlus(ccxt.binance())
         self.data = ohlcvp.load(market=symbol, timeframe=time, since=sinces, limit=length, update=True, verbose=True, workers=100)
         self.close = self.data.close
     
+    def load_eur_usd(self, symbol='EUR/USD', time='30m', length=-1, sinces='2023-01-01 00:00:00'):
+		
+        ohlcvp = OhlcvPlus(ccxt.bybit())
+        self.data = ohlcvp.load(market=symbol, timeframe=time, since=sinces, limit=length, update=True, verbose=True, workers=100)
+        self.close = self.data.close
+        
     def export_csv(self, name):
         self.data.to_csv(name)
     
-    def import_csv(self, name):
-        self.data = pd.read_csv(name)
+    def import_csv(self, name, longeur):
+        self.data = pd.read_csv(name).head(longeur)
         self.close = self.data.close
     
     def open_pos(self, pos:int, take_profit=None, stop_loss=None):
@@ -59,44 +65,56 @@ class Backtest:
         plt.close()
         if len(args) > 1:
             fig, axs = plt.subplots(len(args))
-            axs[0].plot(self.close)
+            axs[0].plot(self.data.timestamp, self.close)
             for i in range(len(args)):
                 for ind in args[i]:
-                    axs[i].plot(ind)
+                    axs[i].plot(self.data.timestamp, ind)
             
             for row in range(len(self.all_position)):
-                x = self.all_position['open_pos'].iloc[row]
-                y = self.close[x]
+                ou = self.all_position['open_pos'].iloc[row]
+                x = self.data.timestamp[ou]
+                y = self.close[ou]
                 axs[0].plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
                 
-                x = self.all_position['close_pos'].iloc[row]
-                y = self.close[x]
+                ou = self.all_position['close_pos'].iloc[row]
+                x = self.data.timestamp[ou]
+                y = self.close[ou]
                 axs[0].plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
+            plt.subplots_adjust(wspace=0)
+            plt.show()
 
         elif len(args) != 0:
             fig, axs = plt.subplots()
-            axs.plot(self.close)
+            axs.plot(self.data.timestamp, self.close)
             for ind in args[0]:
-                axs.plot(ind)
+                axs.plot(self.data.timestamp, ind)
             for row in range(len(self.all_position)):
-                x = self.all_position['open_pos'].iloc[row]
-                y = self.close[x]
+                ou = self.all_position['open_pos'].iloc[row]
+                x = self.data.timestamp[ou]
+                y = self.close[ou]
                 axs.plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
                 
-                x = self.all_position['close_pos'].iloc[row]
-                y = self.close[x]
+                ou = self.all_position['close_pos'].iloc[row]
+                x = self.data.timestamp[ou]
+                y = self.close[ou]
                 axs.plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
+            plt.subplots_adjust(wspace=0)
+            plt.show()
         else:
             fig, ax = plt.subplots()
-            ax.plot(self.close)
+            ax.plot(self.data.timestamp, self.close)
             for row in range(len(self.all_position)):
-                x = self.all_position['open_pos'].iloc[row]
-                y = self.close[x]
+                ou = self.all_position['open_pos'].iloc[row]
+                x = self.data.timestamp[ou]
+                y = self.close[ou]
                 ax.plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
                 
-                x = self.all_position['close_pos'].iloc[row]
-                y = self.close[x]
+                ou = self.all_position['close_pos'].iloc[row]
+                x = self.data.timestamp[ou]
+                y = self.close[ou]
                 ax.plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
+            plt.subplots_adjust(wspace=0)
+            plt.show()
 
     def trier_signal(self, series):
         result = []
@@ -134,9 +152,9 @@ class Backtest:
         print(self.alpha)
 
     def reset(self):
-        data = self.data
+        data, close = self.data, self.close
         self.__init__()
-        self.data, self.close = data, data.close
+        self.data, self.close = data, close
     
     def backtest(self, signal_achat, signal_vente, stop_loss=None, take_profit=None):
         for i in range(len(self.close)):
