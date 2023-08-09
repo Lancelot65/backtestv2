@@ -42,10 +42,10 @@ class Backtest:
             self.position = [self.close[pos], pos]
 
             if take_profit:
-                self.take_profit = self.close[pos] * (1 + (take_profit / 100))
+                self.take_profit = take_profit
             
             if stop_loss:
-                self.stop_loss = self.close[pos] * (1 - (stop_loss / 100))
+                self.stop_loss = stop_loss
     
     def close_pos(self, pos:int):
         if self.position is not None:
@@ -155,13 +155,3 @@ class Backtest:
         data, close = self.data, self.close
         self.__init__()
         self.data, self.close = data, close
-    
-    def backtest(self, signal_achat, signal_vente, stop_loss=None, take_profit=None):
-        for i in range(len(self.close)):
-            if signal_achat[i] == True:
-                self.open_pos(i, take_profit, stop_loss)
-            elif signal_vente[i] == True:
-                self.close_pos(i)
-            
-            self.updates(i)
-        print(self.all_position)
