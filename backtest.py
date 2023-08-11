@@ -44,10 +44,13 @@ class Backtest:
             self.position = [self.close[pos], pos]
 
             if take_profit:
-                self.take_profit = take_profit
+                self.take_profit = take_profit 
             
             if stop_loss:
                 self.stop_loss = stop_loss
+    
+    def adapt_time(self, unit ,nametime):
+        self.data[nametime] = pd.to_datetime(self.data[nametime], unit=unit).apply(mdates.date2num)
     
     def close_pos(self, pos:int):
         if self.position is not None:
