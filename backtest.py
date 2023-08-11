@@ -1,6 +1,8 @@
-import ccxt, pandas as pd, matplotlib.pyplot as plt, sys, indicateur_techniques as ind
+import ccxt, pandas as pd, matplotlib.pyplot as plt, sys, indicateur_techniques as ind, yfinance as yf
 sys.path.append('../Ohlcvplus')
 from ohlcv import OhlcvPlus
+import matplotlib.dates as mdates
+from mplfinance.original_flavor import candlestick_ohlc
 
 class Backtest:
     def __init__(self):
@@ -60,61 +62,80 @@ class Backtest:
 				})
             self.all_position = pd.concat([self.all_position, add_ligne])
             self.position = None
+
     
-    def graphique(self, *args:list):
+    def graphique(self, *args, interval=5, width_bougie=0.0002):
+        df = self.data[['timestamp', 'open', 'high', 'low', 'close']]
         plt.close()
+        
+        def joli():
+            plt.xticks(rotation=45, ha='right')
+            plt.style.use('dark_background')
+            plt.rcParams['font.size'] = 5
+            plt.tight_layout()
+            plt.subplots_adjust(wspace=0, hspace=0.5)
+        
         if len(args) > 1:
-            fig, axs = plt.subplots(len(args))
-            axs[0].plot(self.data.timestamp, self.close)
+            fig, axs = plt.subplots(len(args), figsize=(5, 2 * len(args)), dpi=200)
+
+            candlestick_ohlc(axs[0], df.values, colorup='g', colordown='r', width=width_bougie, alpha=0.9)
+            
+            for ax in axs:
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                ax.spines['bottom'].set_visible(False)
+                ax.spines['left'].set_visible(False)
+                ax.tick_params(axis='both', which='both', length=0)
+                ax.set_axisbelow(True)
+                ax.grid(axis='y', color='#073244', alpha=0.5)
+                ax.grid(axis='x', color='#073244', alpha=0.2)
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d, %H:%M'))
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
+            
             for i in range(len(args)):
                 for ind in args[i]:
-                    axs[i].plot(self.data.timestamp, ind)
+                    axs[i].plot(df['timestamp'], ind[0], color=ind[2], linewidth=ind[1], alpha=ind[3])
             
-            for row in range(len(self.all_position)):
-                ou = self.all_position['open_pos'].iloc[row]
-                x = self.data.timestamp[ou]
-                y = self.close[ou]
-                axs[0].plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
-                
-                ou = self.all_position['close_pos'].iloc[row]
-                x = self.data.timestamp[ou]
-                y = self.close[ou]
-                axs[0].plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
-            plt.subplots_adjust(wspace=0)
-            plt.show()
+            joli()
+        
+        elif len(args) == 1:
+            fig, ax = plt.subplots(figsize=(5, 2), dpi=200)
+            
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d, %H:%M'))
+            ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
+            
+            candlestick_ohlc(ax, df.values, colorup='g', colordown='r', width=width_bougie, alpha=0.9)
 
-        elif len(args) != 0:
-            fig, axs = plt.subplots()
-            axs.plot(self.data.timestamp, self.close)
+            joli()
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.tick_params(axis='both', which='both', length=0)
+            ax.set_axisbelow(True)
+            ax.grid(axis='y', color='#073244', alpha=0.5)
+            ax.grid(axis='x', color='#073244', alpha=0.2)
+            
             for ind in args[0]:
-                axs.plot(self.data.timestamp, ind)
-            for row in range(len(self.all_position)):
-                ou = self.all_position['open_pos'].iloc[row]
-                x = self.data.timestamp[ou]
-                y = self.close[ou]
-                axs.plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
-                
-                ou = self.all_position['close_pos'].iloc[row]
-                x = self.data.timestamp[ou]
-                y = self.close[ou]
-                axs.plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
-            plt.subplots_adjust(wspace=0)
-            plt.show()
+                plt.plot(df['timestamp'], ind[0], color=ind[2], linewidth=ind[1], alpha=ind[3])
+        
         else:
-            fig, ax = plt.subplots()
-            ax.plot(self.data.timestamp, self.close)
-            for row in range(len(self.all_position)):
-                ou = self.all_position['open_pos'].iloc[row]
-                x = self.data.timestamp[ou]
-                y = self.close[ou]
-                ax.plot(x, y, marker='^', markersize=10, color='g', label='Triangles')
-                
-                ou = self.all_position['close_pos'].iloc[row]
-                x = self.data.timestamp[ou]
-                y = self.close[ou]
-                ax.plot(x, y, marker='v', markersize=10, color='r', label='Triangles')
-            plt.subplots_adjust(wspace=0)
-            plt.show()
+            fig, ax = plt.subplots(figsize=(5, 2), dpi=200)
+            
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d, %H:%M'))
+            ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
+            
+            candlestick_ohlc(ax, df.values, colorup='g', colordown='r', width=width_bougie, alpha=0.9)
+            
+            joli()
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.tick_params(axis='both', which='both', length=0)
+            ax.set_axisbelow(True)
+            ax.grid(axis='y', color='#073244', alpha=0.5)
+            ax.grid(axis='x', color='#073244', alpha=0.2)
 
     def trier_signal(self, series):
         result = []
@@ -155,3 +176,13 @@ class Backtest:
         data, close = self.data, self.close
         self.__init__()
         self.data, self.close = data, close
+    
+    def backtest(self, signal_achat, signal_vente, stop_loss=None, take_profit=None):
+        for i in range(len(self.close)):
+            if signal_achat[i] == True:
+                self.open_pos(i, take_profit, stop_loss)
+            elif signal_vente[i] == True:
+                self.close_pos(i)
+            
+            self.updates(i)
+        print(self.all_position)
